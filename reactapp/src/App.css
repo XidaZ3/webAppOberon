@@ -1,0 +1,40 @@
+.main-app {
+  text-align: center;
+  margin: 100px;
+}
+
+.cta-button {
+  padding: 15px;
+  border: none;
+  border-radius: 12px;
+  min-width: 250px;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.connect-wallet-button {
+  background: rgb(32, 129, 226);
+}
+
+.delete-button {
+  background: red;
+}
+
+.ask-refund-button {
+  background: orange;
+}
+.confirm-refund-button {
+  background: green;
+}
+.create-button {
+  background-color: indigo;
+}
+#logo{
+  width: 50%;
+}
+.container {
+  margin-top: 5%;
+  margin-left: 20%;
+  width: 60%;
+}
