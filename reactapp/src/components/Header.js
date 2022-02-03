@@ -7,9 +7,9 @@ export function Header({currentAddress, balance, seller}) {
         <div className="container">
             <div className='main-app'>
                 <img id="logo" alt="Logo Team Oberon" src={logo}></img>
-                <p>Current Adress: {currentAddress} <br/>
+                <p>Current Address: {currentAddress} <br/>
                 Current balance: {balance} <br/>
-                Seller Adress: {seller}</p>
+                Seller Address: {seller}</p>
             </div>
         </div>
     </header>

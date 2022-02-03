@@ -21,6 +21,7 @@ export class DApp extends React.Component {
             tokenData: undefined,
             orders: undefined,
             totalOrders: undefined,
+            getQRCode: undefined,
         };
 
         this.state = this.initialState;
@@ -56,6 +57,7 @@ export class DApp extends React.Component {
                         confirmRefund={(id) => this._confirmRefund(id)}
                         createOrder={() => this._createOrder()}
                         totalOrders={() => this._getTotalOrders()}
+                        getQRCode={() => this._getQRCode()}
                 />
             );
         }
@@ -138,7 +140,11 @@ export class DApp extends React.Component {
 
     async _createOrder() {
         try {
-            await this._contract.createOrder();
+            const overrides = {
+                // Set the order price (msg.value)
+                value: ethers.utils.parseEther("0.01"),
+            }
+            await this._contract.createOrder(overrides);
         } catch(err) {
             console.log(err);
         }
@@ -148,5 +154,18 @@ export class DApp extends React.Component {
         const totalOrders = await this._contract.getTotalOrders();
         this.setState({ totalOrders });
         console.log(totalOrders);
+    }
+
+    async _getQRCode() {
+        const orders = await this._contract.getOrders();
+        const lastOrder = orders.at(-1);
+        const lastOrder_id = lastOrder.id;
+        const orderQRCode = "localhost:3000/confirm-order?id="+lastOrder_id;
+        var QRCode = require('qrcode')
+        var canvas = document.getElementById('canvas')
+        QRCode.toCanvas(canvas, orderQRCode, function (error) {
+            if (error) console.error(error)
+            console.log('QRCode created: '+orderQRCode);
+        })
     }
 }

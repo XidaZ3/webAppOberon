@@ -2,7 +2,7 @@ import React from "react";
 import { Header } from './Header';
 import { Orders } from "./Orders";
 
-export function Seller({currentAddress, balance, seller, orders, deleteOrder, confirmRefund, createOrder, totalOrders}) {
+export function Seller({currentAddress, balance, seller, orders, deleteOrder, confirmRefund, createOrder, totalOrders, getQRCode}) {
   console.log("Seller");
   return (
     <div>
@@ -19,7 +19,7 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
             if(id)
               deleteOrder(id);
           }}>
-          <label>Id ordine che si vuole cancellare: </label>
+          <label>ID ordine che si vuole cancellare: </label>
           <input type="text" name="id" required /> <br/>
           <input className="cta-button delete-button" type="submit" value="Cancella ordine" />
           </form>
@@ -40,6 +40,8 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
           <button onClick={createOrder} className="cta-button create-button">Crea nuovo ordine</button>
           <button onClick={totalOrders} className="cta-button create-button">Total orders</button>
           <button onClick={orders} className="cta-button create-button">Orders List</button>
+          <button onClick={getQRCode} className="cta-button create-button">QRCode ultimo ordine effettuato</button>
+          <canvas id="canvas"></canvas>
 
         </div>
     </div>
