@@ -2,7 +2,7 @@ import React from "react";
 import { Header } from './Header';
 import { Orders } from "./Orders";
 
-export function Seller({currentAddress, balance, seller, orders, deleteOrder, confirmRefund, createOrder}) {
+export function Seller({currentAddress, balance, seller, orders, deleteOrder, confirmRefund, createOrder, totalOrders}) {
   console.log("Seller");
   return (
     <div>
@@ -10,7 +10,6 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
                 balance={balance}
                 seller={seller}
         />
-        <Orders orders={orders}/>
         <div className="container">
           <h2>Cancella Ordine</h2>
           <form onSubmit={(event) => {
@@ -39,6 +38,8 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
           </form>
 
           <button onClick={createOrder} className="cta-button create-button">Crea nuovo ordine</button>
+          <button onClick={totalOrders} className="cta-button create-button">Total orders</button>
+          <button onClick={orders} className="cta-button create-button">Orders List</button>
 
         </div>
     </div>

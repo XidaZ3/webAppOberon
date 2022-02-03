@@ -2,11 +2,11 @@ import React from "react";
 
 export function Orders({orders}) {
 
-    console.log(orders);
+    console.log("Orders list:", orders);
 
     return (
         <div className="container">
-            <p>Lista Ordini: {orders}</p>
+            <button onClick={orders} className="cta-button create-button">Orders list</button>
         </div>
     );
 }

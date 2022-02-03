@@ -17,9 +17,10 @@ export class DApp extends React.Component {
             currentAddress: undefined,
             sellerAddress: undefined,
             balance: undefined,
-            contractAddress: "0xe73d709355212E7CEe78eD141E9db96f8324a248",
+            contractAddress: "0xacC2170f9e3D2C0AE40d9FD39256fAa33801A9f6",
             tokenData: undefined,
-            oreders: undefined,
+            orders: undefined,
+            totalOrders: undefined,
         };
 
         this.state = this.initialState;
@@ -41,7 +42,7 @@ export class DApp extends React.Component {
                 <Buyer  currentAddress={this.state.currentAddress}
                         balance={this.state.balance}
                         seller={this.state.sellerAddress}
-                        orders={this.state.oreders}
+                        orders={this.state.orders}
                         askRefund={(id) => this._askRefund(id)}
                 />
             );
@@ -50,10 +51,11 @@ export class DApp extends React.Component {
                 <Seller currentAddress={this.state.currentAddress}
                         balance={this.state.balance}
                         seller={this.state.sellerAddress}
-                        orders={this.state.oreders}
+                        orders={() => this._initializeOrders()}
                         deleteOrder={(id) => this._deleteOrder(id)}
                         confirmRefund={(id) => this._confirmRefund(id)}
                         createOrder={() => this._createOrder()}
+                        totalOrders={() => this._getTotalOrders()}
                 />
             );
         }
@@ -105,8 +107,9 @@ export class DApp extends React.Component {
     }
 
     async _initializeOrders() {
-        const orders = await this._contract.getOreders();
+        const orders = await this._contract.getOrders();
         this.setState({ orders });
+        console.log(orders);
     }
 
     async _deleteOrder(id) {
@@ -139,5 +142,11 @@ export class DApp extends React.Component {
         } catch(err) {
             console.log(err);
         }
+    }
+
+    async _getTotalOrders() {
+        const totalOrders = await this._contract.getTotalOrders();
+        this.setState({ totalOrders });
+        console.log(totalOrders);
     }
 }
