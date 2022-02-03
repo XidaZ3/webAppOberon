@@ -2,7 +2,7 @@ import React from "react";
 import { Header } from './Header';
 import { Orders } from "./Orders";
 
-export function Seller({currentAddress, balance, seller, orders, deleteOrder, confirmRefund, createOrder, totalOrders, getQRCode}) {
+export function Seller({currentAddress, balance, seller, orders, deleteOrder, confirmRefund, createOrder, totalOrders, getQRCode, orderAmount}) {
   console.log("Seller");
   return (
     <div>
@@ -10,8 +10,9 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
                 balance={balance}
                 seller={seller}
         />
-        <div className="container">
-          <h2>Cancella Ordine</h2>
+
+        <div class="box">
+          <h2>Delete Order</h2>
           <form onSubmit={(event) => {
             event.preventDefault();
             const formData = new FormData(event.target);
@@ -19,12 +20,14 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
             if(id)
               deleteOrder(id);
           }}>
-          <label>ID ordine che si vuole cancellare: </label>
+          <label>Order ID to delete: </label>
           <input type="text" name="id" required /> <br/>
-          <input className="cta-button delete-button" type="submit" value="Cancella ordine" />
+          <input className="cta-button delete-button" type="submit" value="Delete order" />
           </form>
-
-          <h2>Conferma richiesta di reso</h2>
+        </div>
+        
+        <div class="box">
+          <h2>Confirm refund</h2>
           <form onSubmit={(event) => {
             event.preventDefault();
             const formData = new FormData(event.target);
@@ -32,18 +35,22 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
             if(id)
               confirmRefund(id);
           }}>
-          <label>Id ordine che di cui si vuole confermare il reso: </label>
+          <label>Order ID to confirm refund: </label>
           <input type="text" name="id" required /> <br/>
-          <input className="cta-button confirm-refund-button" type="submit" value="Conferma reso" />
+          <input className="cta-button confirm-refund-button" type="submit" value="Confirm refund" />
           </form>
-
-          <button onClick={createOrder} className="cta-button create-button">Crea nuovo ordine</button>
+        </div>
+        
+        <div class="box">
+          <h2>Order Management</h2>
+          <button onClick={createOrder} className="cta-button create-button">Create order ({orderAmount} AVAX)</button>
           <button onClick={totalOrders} className="cta-button create-button">Total orders</button>
           <button onClick={orders} className="cta-button create-button">Orders List</button>
-          <button onClick={getQRCode} className="cta-button create-button">QRCode ultimo ordine effettuato</button>
-          <canvas id="canvas"></canvas>
-
+          <button onClick={getQRCode} className="cta-button create-button">QRCode last order</button>
         </div>
+        
+        <canvas id="qrcode"></canvas>
+
     </div>
   );
 }

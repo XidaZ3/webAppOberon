@@ -12,7 +12,7 @@ export function Buyer({currentAddress, balance, seller, orders, askRefund}) {
         />
         <Orders orders={orders}/>
         <div className="container">
-          <h2>Refund Ordine</h2>
+          <h2>Refund Order</h2>
           <form onSubmit={(event) => {
             event.preventDefault();
             const formData = new FormData(event.target);
@@ -20,8 +20,8 @@ export function Buyer({currentAddress, balance, seller, orders, askRefund}) {
             if(id)
               askRefund(id);
           }}>
-          <label>Id ordine che si vuole chiedere il reso: </label>
-          <input type="text" name="id" required /> <br/>
+          <label>Order ID to ask refund: </label>
+          <input type="text" name="id" required /><br/>
           <input className="cta-button ask-refund-button" type="submit" value="Chiedi reso" />
           </form>
         </div>

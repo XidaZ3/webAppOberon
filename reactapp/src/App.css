@@ -1,16 +1,32 @@
 .main-app {
-  text-align: center;
-  margin: 100px;
+  text-align: left;
+}
+
+.container {
+  margin-top: 4%;
+  margin-left: 20%;
+  width: 60%;
 }
 
 .cta-button {
   padding: 15px;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   min-width: 250px;
   color: white;
-  font-size: 18px;
+  font-size: 1.1em;
   cursor: pointer;
+  margin: 0.2em;
+  font-family: "Poppins", sans-serif;
+  transition: transform 0.3s;
+}
+
+form > .cta-button {
+  margin-top: 0.5em;
+}
+
+.cta-button:hover {
+  transform: scale(0.97);
 }
 
 .connect-wallet-button {
@@ -18,23 +34,46 @@
 }
 
 .delete-button {
-  background: red;
+  background: rgb(172, 21, 21);
 }
 
 .ask-refund-button {
   background: orange;
 }
+
 .confirm-refund-button {
-  background: green;
+  background: rgb(36, 128, 36);
 }
+
 .create-button {
-  background-color: indigo;
+  background-color: rgb(61, 61, 61);
 }
+
 #logo{
   width: 50%;
 }
-.container {
-  margin-top: 5%;
-  margin-left: 20%;
-  width: 60%;
+
+#qrcode {
+  padding-left: 0.2em;
+  padding-top: 2em;
+}
+
+input[type="text" i] {
+  background-color: rgb(34, 34, 34);
+  border: none;
+  margin-left: 1em;
+  padding: 0.3em 0.9em;
+  width: 1.5%;
+}
+
+input[type="text" i]:hover {
+  background-color: rgb(39, 39, 39);
+}
+
+h2 {
+  margin-bottom: 0.3em;
+}
+
+.box {
+  padding: 0.5em 0;
 }

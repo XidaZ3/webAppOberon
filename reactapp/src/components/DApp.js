@@ -9,6 +9,9 @@ import { Seller } from './Seller';
 
 import Escrow from "../contracts/escrow.json";
 
+// Set the order price (msg.value)
+var orderAmount = "0.02";
+
 export class DApp extends React.Component {
     constructor(props) {
         super(props);
@@ -58,6 +61,7 @@ export class DApp extends React.Component {
                         createOrder={() => this._createOrder()}
                         totalOrders={() => this._getTotalOrders()}
                         getQRCode={() => this._getQRCode()}
+                        orderAmount={orderAmount}
                 />
             );
         }
@@ -104,7 +108,9 @@ export class DApp extends React.Component {
     }
 
     async _updateBalance() {
-        const balance = (await this._provider.getBalance(this.state.currentAddress, "latest")).toString();
+        const balanceInWei = await this._provider.getBalance(this.state.currentAddress, "latest");
+        const balanceInAvax = ethers.utils.formatEther(balanceInWei);
+        const balance = balanceInAvax.toString()+" AVAX";
         this.setState({ balance });
     }
 
@@ -141,8 +147,7 @@ export class DApp extends React.Component {
     async _createOrder() {
         try {
             const overrides = {
-                // Set the order price (msg.value)
-                value: ethers.utils.parseEther("0.01"),
+                value: ethers.utils.parseEther(orderAmount),
             }
             await this._contract.createOrder(overrides);
         } catch(err) {
@@ -162,7 +167,7 @@ export class DApp extends React.Component {
         const lastOrder_id = lastOrder.id;
         const orderQRCode = "localhost:3000/confirm-order?id="+lastOrder_id;
         var QRCode = require('qrcode')
-        var canvas = document.getElementById('canvas')
+        var canvas = document.getElementById('qrcode')
         QRCode.toCanvas(canvas, orderQRCode, function (error) {
             if (error) console.error(error)
             console.log('QRCode created: '+orderQRCode);
