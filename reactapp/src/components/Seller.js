@@ -2,13 +2,16 @@ import React from "react";
 import { Header } from './Header';
 import { Orders } from "./Orders";
 
-export function Seller({currentAddress, balance, seller, orders, deleteOrder, confirmRefund, createOrder, totalOrders, getQRCode, orderAmount}) {
+export function Seller({currentAddress, balance, contractBalance, orders, deleteOrder, confirmRefund, totalOrders}) {
   return (
     <div>
         <Header currentAddress={currentAddress}
                 balance={balance}
-                seller={seller}
         />
+
+        <div>
+          <p>Smart Contract balance: {contractBalance}</p>
+        </div>
 
         <div className="box">
           <h2>Delete Order</h2>
@@ -25,7 +28,7 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
           </form>
         </div>
         
-        <div className="box">
+        {/* <div className="box">
           <h2>Confirm refund</h2>
           <form onSubmit={(event) => {
             event.preventDefault();
@@ -38,18 +41,15 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
           <input type="text" name="id" required /> <br/>
           <input className="cta-button confirm-refund-button" type="submit" value="Confirm refund" />
           </form>
-        </div>
+        </div> */}
         
         <div className="box">
-          <h2>Order Management</h2>
-          <button onClick={createOrder} className="cta-button create-button">Create order ({orderAmount} AVAX)</button>
-          <button onClick={totalOrders} className="cta-button create-button">Total orders</button>
-          <button onClick={orders} className="cta-button create-button">Orders List</button>
-          <button onClick={getQRCode} className="cta-button create-button">QRCode last order</button>
+          <h2>Orders</h2>
+          <p>Total orders: {totalOrders}</p>
         </div>
-        
-        <canvas id="qrcode"></canvas>
 
+        {/* AL POSTO DEL PULSANTE IMPLEMENTARE LISTA */}
+        <Orders orders={orders}/>
     </div>
   );
 }

@@ -9,9 +9,8 @@ import { Seller } from './Seller';
 
 import Escrow from "../contracts/escrow.json";
 
-// Set the order price (msg.value)
 const orderAmount = "0.02";
-// Fuji ID
+const ourNetwork = "fuji";
 
 const networks = {
     "fuji": {
@@ -27,7 +26,6 @@ const networks = {
     }
 };
 
-const ourNetwork = "fuji";
 
 export class DApp extends React.Component {
     constructor(props) {
@@ -37,11 +35,13 @@ export class DApp extends React.Component {
             currentAddress: undefined,
             sellerAddress: undefined,
             balance: undefined,
+            contractBalance: undefined,
             contractAddress: "0xacC2170f9e3D2C0AE40d9FD39256fAa33801A9f6",
             tokenData: undefined,
             orders: undefined,
             totalOrders: undefined,
             getQRCode: undefined,
+            userIsBuyer: false,
         };
         
         this.state = this.initialState;
@@ -60,27 +60,27 @@ export class DApp extends React.Component {
             );
         }
 
-        if(this.state.currentAddress === this.state.sellerAddress) {
+        if(this.state.userIsBuyer) {
             return (
                 <Buyer  currentAddress={this.state.currentAddress}
                         balance={this.state.balance}
                         seller={this.state.sellerAddress}
                         orders={this.state.orders}
                         askRefund={(id) => this._askRefund(id)}
+                        createOrder={() => this._createOrder()}
+                        orderAmount={orderAmount}
+                        getQRCode={() => this._getQRCode()}
                 />
             );
         } else {
             return (
                 <Seller currentAddress={this.state.currentAddress}
                         balance={this.state.balance}
-                        seller={this.state.sellerAddress}
+                        contractBalance={this.state.contractBalance}
                         orders={() => this._initializeOrders()}
                         deleteOrder={(id) => this._deleteOrder(id)}
                         confirmRefund={(id) => this._confirmRefund(id)}
-                        createOrder={() => this._createOrder()}
-                        totalOrders={() => this._getTotalOrders()}
-                        getQRCode={() => this._getQRCode()}
-                        orderAmount={orderAmount}
+                        totalOrders={this.state.totalOrders}
                 />
             );
         }
@@ -119,9 +119,11 @@ export class DApp extends React.Component {
         if (window.ethereum.chainId != ourNetwork) {
             await this._changeNetwork(ourNetwork);
         } else {
-            window.ethereum.on("accountsChanged", ([newAddress]) => {
+            window.ethereum.on("accountsChanged", async ([newAddress]) => {
                 if (newAddress === undefined) {
-                    return this._resetState();
+                    console.log("ERROR");
+                } else {
+                    await this._setAddress();
                 }
             });
         }
@@ -133,12 +135,18 @@ export class DApp extends React.Component {
           currentAddress: userAddress,
         });
 
-        this._intializeEthers();
+        this._initializeEthers();
         this._initializeSeller();
         this._updateBalance();
+        this._userIsBuyer();
+
+        if (!this.state.userIsBuyer) {
+            this._getContractBalance();
+            this._getTotalOrders();
+        }
     }
 
-    async _intializeEthers() {
+    async _initializeEthers() {
         this._provider = new ethers.providers.Web3Provider(window.ethereum);
     
         this._contract = new ethers.Contract(
@@ -160,10 +168,17 @@ export class DApp extends React.Component {
         this.setState({ balance });
     }
 
+    async _userIsBuyer() {
+        const userIsBuyer = this.state.currentAddress !== this.state.sellerAddress;
+        this.setState({ userIsBuyer });
+    }
+
     async _initializeOrders() {
+        // TODO (first inside smart contract)
+        // if is buyer --> take buyer orders
+        // else --> take all seller orders
         const orders = await this._contract.getOrders();
         this.setState({ orders });
-        console.log(orders);
     }
 
     async _deleteOrder(id) {
@@ -202,12 +217,20 @@ export class DApp extends React.Component {
     }
 
     async _getTotalOrders() {
-        const totalOrders = await this._contract.getTotalOrders();
+        var totalOrders = await this._contract.getTotalOrders();
+        totalOrders = totalOrders.toNumber();
         this.setState({ totalOrders });
-        console.log(totalOrders);
+    }
+
+    async _getContractBalance() {
+        var contractBalance = await this._contract.getBalance();
+        const contractBalanceInAvax = ethers.utils.formatEther(contractBalance);
+        contractBalance = contractBalanceInAvax.toString()+" AVAX";
+        this.setState({ contractBalance });
     }
 
     async _getQRCode() {
+        // TODO: QRCode with id given
         const orders = await this._contract.getOrders();
         const lastOrder = orders.at(-1);
         const lastOrder_id = lastOrder.id;
@@ -216,7 +239,6 @@ export class DApp extends React.Component {
         var canvas = document.getElementById('qrcode')
         QRCode.toCanvas(canvas, orderQRCode, function (error) {
             if (error) console.error(error)
-            console.log('QRCode created: '+orderQRCode);
         })
     }
 }

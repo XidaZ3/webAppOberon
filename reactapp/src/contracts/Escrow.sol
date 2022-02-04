@@ -20,6 +20,8 @@ contract Escrow {
 	address contractAddress = address(this);
 	mapping(address => bool) buyers;
 	mapping(uint => Order) orders;
+	mapping(address => uint) ordersBuyers;
+	mapping(address => uint) ordersSellers;
 
 	modifier onlyBuyer() {
 		require(buyers[msg.sender]);

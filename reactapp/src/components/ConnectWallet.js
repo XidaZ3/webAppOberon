@@ -2,10 +2,10 @@ import React from "react";
 
 export function ConnectWallet({ connectWallet }) {
   return (
-    <div>
+    <div id="connectWallet">
       <p>Please connect your wallet.</p>
       <button
-        className="cta-button connect-wallet-button"
+        className="cta-button basic-button"
         type="button"
         onClick={connectWallet}
       >

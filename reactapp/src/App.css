@@ -1,3 +1,11 @@
+:root {
+  --text: rgb(231, 231, 231);
+  --textButton: white;
+  --basicButton: rgb(61, 61, 61);
+  --confirmButton: rgb(36, 128, 36);
+  --deleteButton: rgb(172, 21, 21);
+}
+
 .main-app {
   text-align: left;
 }
@@ -13,7 +21,7 @@
   border: none;
   border-radius: 8px;
   min-width: 250px;
-  color: white;
+  color: (--textButton);
   font-size: 1.1em;
   cursor: pointer;
   margin: 0.2em;
@@ -29,24 +37,16 @@ form > .cta-button {
   transform: scale(0.97);
 }
 
-.connect-wallet-button {
-  background: rgb(32, 129, 226);
-}
-
 .delete-button {
-  background: rgb(172, 21, 21);
-}
-
-.ask-refund-button {
-  background: orange;
+  background: var(--deleteButton);
 }
 
 .confirm-refund-button {
-  background: rgb(36, 128, 36);
+  background: var(--confirmButton);
 }
 
-.create-button {
-  background-color: rgb(61, 61, 61);
+.basic-button {
+  background-color: var(--basicButton);
 }
 
 #logo{
@@ -56,6 +56,7 @@ form > .cta-button {
 #qrcode {
   padding-left: 0.2em;
   padding-top: 2em;
+  padding-bottom: 2em;
 }
 
 input[type="text" i] {
@@ -80,4 +81,10 @@ h2 {
 
 .box {
   padding: 0.5em 0;
+}
+
+#connectWallet {
+  text-align: center;
+  font-size: 1.3em;
+  margin-top: 15em;
 }
