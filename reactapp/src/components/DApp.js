@@ -10,12 +10,29 @@ import { Seller } from './Seller';
 import Escrow from "../contracts/escrow.json";
 
 // Set the order price (msg.value)
-var orderAmount = "0.02";
+const orderAmount = "0.02";
+// Fuji ID
+
+const networks = {
+    "fuji": {
+        chainId: "0xa869",
+        chainName: "Avalanche Fuji Testnet",
+        nativeCurrency: {
+            name: "AVAX",
+            symbol: "AVAX",
+            decimals: 18
+        },
+        rpcUrls: ["https://api.avax-test.network/ext/bc/C/rpc"],
+        blockExplorerUrls: ["https://testnet.snowtrace.io/"]
+    }
+};
+
+const ourNetwork = "fuji";
 
 export class DApp extends React.Component {
     constructor(props) {
         super(props);
-
+        
         this.initialState = {
             currentAddress: undefined,
             sellerAddress: undefined,
@@ -26,18 +43,20 @@ export class DApp extends React.Component {
             totalOrders: undefined,
             getQRCode: undefined,
         };
-
+        
         this.state = this.initialState;
+        
     }
-
+    
     render() {
+        
         if(window.ethereum === undefined) {
             return <NoWalletDetected/>;
         }
-
+        
         if(!this.state.currentAddress) {
             return (
-              <ConnectWallet connectWallet={() => this._connectWallet()}/>
+                <ConnectWallet connectWallet={() => this._connectWallet()}/>
             );
         }
 
@@ -65,21 +84,48 @@ export class DApp extends React.Component {
                 />
             );
         }
-    }
+    };
 
-    async _connectWallet() {
+    async _setAddress() {
         const [currentAddress] = await window.ethereum.request({ method: 'eth_requestAccounts' });
         this._initialize(currentAddress);
-        window.ethereum.on("accountsChanged", ([newAddress]) => {
-            if (newAddress === undefined) {
-                return this._resetState();
+    }
+
+    async _changeNetwork(networkName) {
+        try {
+            if (!window.ethereum) throw new Error("No crypto wallet found");
+            await window.ethereum.request({
+                method: "wallet_addEthereumChain",
+                params: [
+                    {
+                        ...networks[networkName]
+                    }
+                ]
+            });
+            await this._setAddress();
+        } catch (err) {
+            console.log(err.message);
+        }
+    };
+
+    async _connectWallet() {
+        window.ethereum.on('chainChanged', async (chainId) => {
+            if (chainId != networks[ourNetwork].chainId) {
+                await this._changeNetwork(ourNetwork);
+            } else {
+                await this._setAddress();
             }
-            this._initialize(newAddress);
         });
-        
-        window.ethereum.on("chainChanged", ([chainId]) => {
-            this._resetState();
-        });
+        if (window.ethereum.chainId != ourNetwork) {
+            await this._changeNetwork(ourNetwork);
+        } else {
+            window.ethereum.on("accountsChanged", ([newAddress]) => {
+                if (newAddress === undefined) {
+                    return this._resetState();
+                }
+            });
+        }
+        await this._setAddress();
     }
 
     _initialize(userAddress) {
@@ -104,7 +150,7 @@ export class DApp extends React.Component {
 
     async _initializeSeller() {
         const sellerAddress = await this._contract.getSeller();
-        this.setState({ sellerAddress});
+        this.setState({ sellerAddress });
     }
 
     async _updateBalance() {

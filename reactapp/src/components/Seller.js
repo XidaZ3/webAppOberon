@@ -3,7 +3,6 @@ import { Header } from './Header';
 import { Orders } from "./Orders";
 
 export function Seller({currentAddress, balance, seller, orders, deleteOrder, confirmRefund, createOrder, totalOrders, getQRCode, orderAmount}) {
-  console.log("Seller");
   return (
     <div>
         <Header currentAddress={currentAddress}
@@ -11,7 +10,7 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
                 seller={seller}
         />
 
-        <div class="box">
+        <div className="box">
           <h2>Delete Order</h2>
           <form onSubmit={(event) => {
             event.preventDefault();
@@ -26,7 +25,7 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
           </form>
         </div>
         
-        <div class="box">
+        <div className="box">
           <h2>Confirm refund</h2>
           <form onSubmit={(event) => {
             event.preventDefault();
@@ -41,7 +40,7 @@ export function Seller({currentAddress, balance, seller, orders, deleteOrder, co
           </form>
         </div>
         
-        <div class="box">
+        <div className="box">
           <h2>Order Management</h2>
           <button onClick={createOrder} className="cta-button create-button">Create order ({orderAmount} AVAX)</button>
           <button onClick={totalOrders} className="cta-button create-button">Total orders</button>
