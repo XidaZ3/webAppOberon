@@ -70,6 +70,10 @@ input[type="text" i]:hover {
   background-color: rgb(39, 39, 39);
 }
 
+h1 {
+  font-size: 3em;
+}
+
 h2 {
   margin-bottom: 0.3em;
 }
