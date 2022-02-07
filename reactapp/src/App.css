@@ -88,3 +88,12 @@ h2 {
   font-size: 1.3em;
   margin-top: 15em;
 }
+
+.table, th, td {
+  border: 1px solid var(--textButton);
+  text-align: center;
+}
+
+.orderTable {
+  border-collapse: collapse;
+}

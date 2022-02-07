@@ -6,6 +6,7 @@ import { NoWalletDetected } from "./NoWalletDetected";
 import { ConnectWallet } from "./ConnectWallet";
 import { Buyer } from './Buyer';
 import { Seller } from './Seller';
+import { Loading } from './Loading';
 
 import Escrow from "../contracts/escrow.json";
 
@@ -26,7 +27,6 @@ const networks = {
     }
 };
 
-
 export class DApp extends React.Component {
     constructor(props) {
         super(props);
@@ -43,9 +43,7 @@ export class DApp extends React.Component {
             getQRCode: undefined,
             userIsBuyer: false,
         };
-        
         this.state = this.initialState;
-        
     }
     
     render() {
@@ -59,6 +57,24 @@ export class DApp extends React.Component {
                 <ConnectWallet connectWallet={() => this._connectWallet()}/>
             );
         }
+
+        if(!this.state.orders || !this.state.balance) {
+            return (
+                <Loading/>
+            );
+        }
+
+        /*PROVVISORIO
+        return (
+            <Seller currentAddress={this.state.currentAddress}
+                    balance={this.state.balance}
+                    contractBalance={this.state.contractBalance}
+                    orders={this.state.orders}
+                    deleteOrder={(id) => this._deleteOrder(id)}
+                    confirmRefund={(id) => this._confirmRefund(id)}
+                    totalOrders={this.state.totalOrders}
+            />
+        );*/
 
         if(this.state.userIsBuyer) {
             return (
@@ -110,13 +126,13 @@ export class DApp extends React.Component {
 
     async _connectWallet() {
         window.ethereum.on('chainChanged', async (chainId) => {
-            if (chainId != networks[ourNetwork].chainId) {
+            if (chainId !== networks[ourNetwork].chainId) {
                 await this._changeNetwork(ourNetwork);
             } else {
                 await this._setAddress();
             }
         });
-        if (window.ethereum.chainId != ourNetwork) {
+        if (window.ethereum.chainId !== ourNetwork) {
             await this._changeNetwork(ourNetwork);
         } else {
             window.ethereum.on("accountsChanged", async ([newAddress]) => {
@@ -131,19 +147,18 @@ export class DApp extends React.Component {
     }
 
     _initialize(userAddress) {
-        this.setState({
-          currentAddress: userAddress,
-        });
-
         this._initializeEthers();
-        this._initializeSeller();
-        this._updateBalance();
+        this._initializeOrders();
         this._userIsBuyer();
-
         if (!this.state.userIsBuyer) {
             this._getContractBalance();
             this._getTotalOrders();
         }
+        this.setState({
+          currentAddress: userAddress,
+        });
+        this._initializeSeller();
+        this._updateBalance();
     }
 
     async _initializeEthers() {
