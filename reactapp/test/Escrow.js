@@ -13,11 +13,11 @@ async function getGas(_response) {
 }
 
 describe('Escrow contract', () => {
-  let Escrow, escrow, owner, seller1, buyer1, buyer2;
-  let ordersCreated;
+  let Escrow, escrow, owner, seller1, seller2, seller3, buyer1, buyer2, buyer3;
   let orders;
   let amountOrder1 = '0.1';
   let amountOrder2 = '0.2';
+  let amountOrder3 = '0.3';
 
   // Contract Enum
   const created = 0;
@@ -25,17 +25,21 @@ describe('Escrow contract', () => {
 	const	deleted = 2;
 	const	refundAsked = 3;
 	const	refunded = 4;
-
+  
   beforeEach(async () => {
     Escrow = await ethers.getContractFactory('Escrow');
     escrow = await Escrow.deploy();
-    [owner, seller1, seller2, buyer1, buyer2, buyer3, _] = await ethers.getSigners();
+    [owner, seller1, seller2, seller3, buyer1, buyer2, buyer3, _] = await ethers.getSigners();
     await escrow.connect(seller1).registerAsSeller();    
+    await escrow.connect(seller2).registerAsSeller();    
     await escrow.connect(buyer1).createOrder(seller1.address, {value: ethers.utils.parseEther(amountOrder1)});
     await escrow.connect(buyer2).createOrder(seller1.address, {value: ethers.utils.parseEther(amountOrder2)});
+    await escrow.connect(buyer2).createOrder(seller1.address, {value: ethers.utils.parseEther(amountOrder3)});
     orders = await escrow.getOrders();
-    ordersCreated = await escrow.getTotalOrders();
   });
+
+  let ordersCreated = 3;
+  let registeredSellers = 2;
   
   describe('Deployment', () => {
     it("Sets the right owner", async () => {
@@ -48,6 +52,9 @@ describe('Escrow contract', () => {
       let sellers = await escrow.getSellers();
       expect(sellers[0]).to.equal(seller1.address);
     })
+    it("Doesn't allow a seller to register more than one time", async () => {
+      expect(escrow.connect(seller1).registerAsSeller()).to.be.reverted;
+    })
   });
   
   describe('Orders management | States flow', () => {
@@ -58,10 +65,7 @@ describe('Escrow contract', () => {
       assert.equal(orders[0].state, created);
       let nOrders = await escrow.getTotalOrders();
       expect(nOrders.toNumber()).to.equal(ordersCreated);
-    })
-
-    it("Doesn't let confirm buyer2 an order made by buyer1", async () => {
-      expect(escrow.connect(buyer2).confirmOrder(orders[0].id)).to.be.reverted;
+      expect(escrow.connect(buyer2).createOrder(seller3.address, {value: ethers.utils.parseEther("0.5")})).to.be.reverted;
     })
 
     it("Lets the seller delete an unconfirmed order", async () => {
@@ -70,11 +74,33 @@ describe('Escrow contract', () => {
       assert.equal(orders[0].state, deleted);
       expect(escrow.connect(buyer1).confirmOrder(orders[0].id)).to.be.reverted;
     })
-
+    
     it("Lets a buyer ask for refund for an order", async () => {
       await escrow.connect(buyer1).askRefund(orders[0].id);
       orders = await escrow.getOrders();
-      assert.equal(orders[0].state, refundAsked);
+      assert.equal(orders[0].state, refunded);
+      expect(escrow.connect(seller1).refundBuyer(orders[0].id)).to.be.reverted;
+      expect(escrow.connect(buyer1).askRefund(orders[0].id)).to.be.reverted;
+    })
+
+    it("Doesn't let confirm buyer2 an order made by buyer1", async () => {
+      expect(escrow.connect(buyer2).confirmOrder(orders[0].id)).to.be.reverted;
+    })
+
+    it("Doesn't let confirm an order by a seller", async () => {
+      expect(escrow.connect(seller1).confirmOrder(orders[0].id)).to.be.reverted;
+    })
+
+    it("Doesn't let delete an order by a buyer", async () => {
+      expect(escrow.connect(buyer1).deleteOrder(orders[0].id)).to.be.reverted;
+    })
+
+    it("Doesn't let buyer confirm a non-existent order", async () => {
+      expect(escrow.connect(buyer1).confirmOrder(5)).to.be.reverted;
+    })
+
+    it("Doesn't let a seller perform actions to an order he doesn't own", async () => {
+      expect(escrow.connect(seller2).deleteOrder(orders[0].id)).to.be.reverted;
     })
   })
 
@@ -159,8 +185,11 @@ describe('Escrow contract', () => {
       return [gasSpentBuyer,revertedGas];
     }
 
-    it("Lets a seller refund a buyer who asked the refund, sending him the right amount", async () => {
+    it("Lets a seller refund a buyer who asked the refund AFTER confirmation, sending him the right amount", async () => {
       let rightAmount = weiToEther(orders[orderId1].amount);
+      // buyer confirms the order before asking the refund
+      await escrow.connect(buyer2).confirmOrder(orderId1);
+      expect(escrow.connect(seller1).deleteOrder(orderId1)).to.be.reverted;
 
       let preBuyerBalance = await ethers.provider.getBalance(buyer2.address);
       let preContractBalance = await escrow.getBalance();
@@ -181,6 +210,8 @@ describe('Escrow contract', () => {
 
     it("Reverts a refund call if buyer doesn't send money / sends the wrong amount, and the amount (if sent) is sent back", async () => {
       // ORDER ID == 1
+      // buyer confirms the order before asking the refund
+      await escrow.connect(buyer1).confirmOrder(orderId0);
       let preSellerBalance = await ethers.provider.getBalance(seller1.address);
       // Seller sends more than the right amount
       gasSpent = await performRefund(buyer1, seller1, orders[orderId0], higherAmountOrderId1);
@@ -192,10 +223,12 @@ describe('Escrow contract', () => {
       
       // Here we demonstate revertedGas is a really small amount of ETH
       assert(revertedGas < acceptable_Eth_Lost_On_RevertedTx);
-      
+
       expect(postSellerBalance).to.equal(preSellerBalance.sub(gasSpent[1]));
 
       // ORDER ID == 0
+      // buyer confirms the order before asking the refund
+      await escrow.connect(buyer2).confirmOrder(orderId1);
       preSellerBalance = await ethers.provider.getBalance(seller1.address);
       // Seller sends less than the right amount
       gasSpent = await performRefund(buyer2, seller1, orders[orderId1], lowerAmountOrderId0);
@@ -209,6 +242,29 @@ describe('Escrow contract', () => {
       assert(revertedGas < acceptable_Eth_Lost_On_RevertedTx);
 
       expect(postSellerBalance).to.equal(preSellerBalance.sub(gasSpent[1]));
+    })
+  })
+
+  describe('Getters', async () => {
+    it("Returns all orders of a buyer given his address", async () => {
+      let ordersBuyer1 = await escrow.getOrdersOfUser(buyer1.address);
+      assert(ordersBuyer1.length > 0);
+      expect(ordersBuyer1[0].buyer).to.equal(buyer1.address);
+    })
+
+    it("Returns all orders of a seller given his address", async () => {
+      let ordersSeller1 = await escrow.getOrdersOfUser(seller1.address);
+      assert(ordersSeller1.length > 0);
+      expect(ordersSeller1[0].seller).to.equal(seller1.address);
+    })
+
+    it("Reverts if asking orders of unregistered user", async () => {
+      expect(escrow.getOrdersOfUser(buyer3.address)).to.be.revertedWith("This user is not registered in our platform.");
+    })
+
+    it("Returns the right number of sellers", async () => {
+      let nSellers = await escrow.getTotalSellers();
+      expect(nSellers).to.equal(registeredSellers);
     })
   })
 })

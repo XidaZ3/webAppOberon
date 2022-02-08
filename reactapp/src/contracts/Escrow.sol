@@ -1,25 +1,17 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-/**
- *  TODO: System to refund buyers fees 
- *  Example: 1 AVAX sent to s.c. when seller registers, 
- *  then when buyer calls a function he gets the refund.
- */
-
 contract Escrow {
 
 	using Counters for Counters.Counter;
 
 	/**
-	 *
 	 *  STATES FLOW:
 	 *  - created
 	 *  - confirmed IFF created
-	 *  - deleted IFF created || refundAsked
+	 *  - deleted IFF created
 	 *  - refundAsked IFF created || confirmed
 	 *  - refunded IFF refundAsked
-	 *
 	 */
 	enum State { 
 		created,
@@ -85,11 +77,7 @@ contract Escrow {
 		owner = msg.sender;
 	}
 
-	/*
-	 * 
-	 *	The buyer makes an order and sends its funds to the smart contract (inside the object newOrder)
-	 *
-	 */
+	// The buyer makes an order and sends his funds to the smart contract (inside the object Order)
 	function createOrder(address payable _seller) 
 		external 
 		payable 
@@ -119,12 +107,8 @@ contract Escrow {
 	}
 
 	/*
-	 * 
-	 *	The buyer confirms the specified order and the smart contract 
+	 *	The buyer confirms the specified order, and the smart contract 
 	 *  sends the funds (from the object orderToConfirm) to the seller.
-	 *	He can confirm if it's not already confirmed or deleted.
-	 *  - Money from SC to seller
-	 *
 	 */
 	function confirmOrder(uint _orderID) 
 		external
@@ -137,12 +121,8 @@ contract Escrow {
 			orderToConfirm.state == State.created, 
 			"ERROR: You can't confirm this order."
 		);
-		uint amount = orderToConfirm.amount;
-		require(
-			contractAddress.balance >= amount,
-			"ERROR: Insufficient funds inside smart contract."
-		);
 
+		uint amount = orderToConfirm.amount;
 		address payable seller = orderToConfirm.seller;
 		orderToConfirm.state = State.confirmed;
 		seller.transfer(amount);
@@ -153,10 +133,8 @@ contract Escrow {
 	}
 
 	/*
-	 * 
 	 *	The seller can delete the order if it's not been already confirmed
-	 *	- Money from SC to buyer
-	 *
+	 *	Money goes from contract to buyer
 	 */
 	function deleteOrder(uint _orderID) 
 		external
@@ -166,15 +144,11 @@ contract Escrow {
 	{
 		Order memory orderToDelete = orders[_orderID];
 		require(
-			orderToDelete.state == State.created || orderToDelete.state == State.refundAsked,
+			orderToDelete.state == State.created,
 			"ERROR: You can't delete this order."
 		);
+		
 		uint amount = orderToDelete.amount;
-		require(
-			contractAddress.balance >= amount, 
-			"ERROR: Insufficient funds inside smart contract."
-		);
-
 		orderToDelete.state = State.deleted;
 		orderToDelete.buyer.transfer(amount);
 
@@ -184,14 +158,9 @@ contract Escrow {
 	}
 
 	/*
-	 * 
 	 *	The buyer can ask for a refund. IF:
 	 *	- confirmed: money from the seller to the buyer;
-	 *				 seller will have to call refundBuyer(_orderID) in order to send him back the right amount of money
-	 *	- not confirmed: money from the smart contract to the buyer;
-	 * 				  	 seller has to call deleteOrder(_orderID) in order to send him back the money
-	 *	- already deleted/askedRefund/refunded: nothing happens (error)
-	 *
+	 *	- not confirmed: money from the smart contract to the buyer, immediately;
 	 */
 	function askRefund(uint _orderID) 
 		external
@@ -201,23 +170,29 @@ contract Escrow {
 	{
 		Order memory orderToAskRefund = orders[_orderID];
 		require(
-			orderToAskRefund.state == State.created || orderToAskRefund.state == State.confirmed, 
+			orderToAskRefund.state == State.created || orderToAskRefund.state == State.confirmed,
 			"ERROR: You can't ask refund for this order."
 		);
 
-		orderToAskRefund.state = State.refundAsked;
+		// if order has just been created and user wants a refund, he gets it instantly
+		if (orderToAskRefund.state == State.created) {
+			orderToAskRefund.state = State.refunded;
+			orderToAskRefund.buyer.transfer(orderToAskRefund.amount);
+			emit orderRefunded(orderToAskRefund);
+		} 
+		// else, it can only be a confirmed order so seller has to refund the buyer later with refundBuyer(_orderID)
+		else {
+			orderToAskRefund.state = State.refundAsked;
+			emit refundAsked(orderToAskRefund);
+		}
 
 		orders[_orderID] = orderToAskRefund;
-
-		emit refundAsked(orderToAskRefund);
 	}
 	
 	/**
-	 * 
 	 * 	The seller can refund the buyer if he asked a refund
 	 *  and the order has already been confirmed.
 	 * 	- Money from buyer to seller
-	 * 
 	 */ 
 	function refundBuyer(uint _orderID)
 		external
@@ -267,9 +242,7 @@ contract Escrow {
 	}
 
 	/**
-	 * 
 	 * 	GETTERS
-	 * 
 	 */ 
 
 	function getBalance() 
@@ -304,28 +277,29 @@ contract Escrow {
     	return result;
 	}
 
-	function getOrdersOfBuyer(address _buyer)
+	function getOrdersOfUser(address _user)
 		public
 		view
 		returns(Order[] memory)
 	{
-		Order[] memory result = new Order[](ordersBuyers[_buyer].length);
-		for (uint i = 0; i<ordersBuyers[_buyer].length; ++i) {
-        	result[i] = orders[ordersBuyers[_buyer][i]];
-    	}
-    	return result;
-	}
+		Order[] memory result;
 
-	function getOrdersOfSeller(address _seller)
-		public
-		view
-		returns(Order[] memory)
-	{
-		Order[] memory result = new Order[](ordersSellers[_seller].length);
-		for (uint i = 0; i<ordersSellers[_seller].length; ++i) {
-        	result[i] = orders[ordersSellers[_seller][i]];
-    	}
-    	return result;
+		if (buyers[_user]) {
+			result = new Order[](ordersBuyers[_user].length);
+			for (uint i = 0; i<ordersBuyers[_user].length; ++i) {
+				result[i] = orders[ordersBuyers[_user][i]];
+			}
+		} else {
+			if (sellers[_user]) {
+				result = new Order[](ordersSellers[_user].length);
+				for (uint i = 0; i<ordersSellers[_user].length; ++i) {
+					result[i] = orders[ordersSellers[_user][i]];
+				}
+			} else {
+				revert('This user is not registered in our platform.');
+			}
+		}
+		return result;
 	}
 
 	function getTotalOrders()

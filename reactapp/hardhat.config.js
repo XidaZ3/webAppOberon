@@ -1,4 +1,5 @@
 require("@nomiclabs/hardhat-waffle");
+require('solidity-coverage');
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -22,9 +23,12 @@ const FUJI_PUBLIC_KEY = "0xFDf572Ce0b87f7036f9F528FD55968348Bd86081"
 module.exports = {
   solidity: "0.8.0",
   networks: {
-        fuji: {
-            url: `https://api.avax-test.network/ext/bc/C/rpc`,
-            accounts: [`${FUJI_PRIVATE_KEY}`]
-        }
+    fuji: {
+        url: `https://api.avax-test.network/ext/bc/C/rpc`,
+        accounts: [`${FUJI_PRIVATE_KEY}`]
     }
+  },
+  plugins: [
+    "solidity-coverage"
+  ]
 };
