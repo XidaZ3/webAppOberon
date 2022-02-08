@@ -1,27 +1,53 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Counters.sol";
 
+/**
+ *  TODO: System to refund buyers fees 
+ *  Example: 1 AVAX sent to s.c. when seller registers, 
+ *  then when buyer calls a function he gets the refund.
+ */
+
 contract Escrow {
 
 	using Counters for Counters.Counter;
 
+	/**
+	 *
+	 *  STATES FLOW:
+	 *  - created
+	 *  - confirmed IFF created
+	 *  - deleted IFF created || refundAsked
+	 *  - refundAsked IFF created || confirmed
+	 *  - refunded IFF refundAsked
+	 *
+	 */
+	enum State { 
+		created,
+		confirmed,
+		deleted,
+		refundAsked,
+		refunded
+	}
+
 	struct Order {
 		uint id;
 		address payable buyer;
+		address payable seller;
 		uint amount;
-		bool confirmed;
-		bool deleted;
-		bool refundAsked;
-		bool refunded;
+		State state;
 	}
 
 	Counters.Counter totalOrders;
-	address payable seller = payable(0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2);
+	Counters.Counter totalSellers;
 	address contractAddress = address(this);
-	mapping(address => bool) buyers;
+	address public owner;
+
 	mapping(uint => Order) orders;
-	mapping(address => uint) ordersBuyers;
-	mapping(address => uint) ordersSellers;
+	mapping(address => bool) buyers;
+	mapping(address => bool) sellers;
+	mapping(uint => address) sellersIterable;
+	mapping(address => uint[]) ordersBuyers;
+	mapping(address => uint[]) ordersSellers;
 
 	modifier onlyBuyer() {
 		require(buyers[msg.sender]);
@@ -29,7 +55,22 @@ contract Escrow {
 	}
 
 	modifier onlySeller() {
-		require(msg.sender == seller);
+		require(sellers[msg.sender]);
+		_;
+	}
+
+	modifier orderExists(uint _orderID) {
+		require(_orderID <= totalOrders.current());
+		_;
+	}
+
+	modifier sellerIsOwner(uint _orderID) {
+		require(orders[_orderID].seller == msg.sender);
+		_;
+	}
+
+	modifier buyerIsOwner(uint _orderID) {
+		require(orders[_orderID].buyer == msg.sender);
 		_;
 	}
 
@@ -38,13 +79,25 @@ contract Escrow {
 	event orderDeleted(Order order);
 	event refundAsked(Order order);
 	event orderRefunded(Order order);
+	event sellerRegistered(address seller);
+
+	constructor() {
+		owner = msg.sender;
+	}
 
 	/*
 	 * 
 	 *	The buyer makes an order and sends its funds to the smart contract (inside the object newOrder)
 	 *
 	 */
-	function createOrder() public payable {
+	function createOrder(address payable _seller) 
+		external 
+		payable 
+	{
+		require(
+			sellers[_seller], 
+			"ERROR: This seller isn't registered in our platform."
+		);
 		address payable buyer = payable(msg.sender);
 		uint amount = msg.value;
 		
@@ -52,8 +105,14 @@ contract Escrow {
 			buyers[buyer] = true;
 		}
 
-		Order memory newOrder = Order(totalOrders.current(), buyer, amount, false, false, false, false);
-		orders[totalOrders.current()] = newOrder;
+		uint id = totalOrders.current();
+
+		Order memory newOrder = Order(id, buyer, _seller, amount, State.created);
+		orders[id] = newOrder;
+
+		ordersBuyers[buyer].push(id);
+		ordersSellers[_seller].push(id);
+
 		totalOrders.increment();
 
 		emit orderCreated(newOrder);
@@ -67,21 +126,26 @@ contract Escrow {
 	 *  - Money from SC to seller
 	 *
 	 */
-	function confirmOrder(uint _orderID) public onlyBuyer {
-		require(_orderID <= totalOrders.current(), "ERROR: This order doesn't exist.");
-
+	function confirmOrder(uint _orderID) 
+		external
+		onlyBuyer
+		orderExists(_orderID)
+		buyerIsOwner(_orderID)
+	{
 		Order memory orderToConfirm = orders[_orderID];
+		require(
+			orderToConfirm.state == State.created, 
+			"ERROR: You can't confirm this order."
+		);
 		uint amount = orderToConfirm.amount;
+		require(
+			contractAddress.balance >= amount,
+			"ERROR: Insufficient funds inside smart contract."
+		);
 
-		require(orderToConfirm.buyer == msg.sender, "ERROR: You never created this order.");
-		require(!orderToConfirm.confirmed, "ERROR: This order is already confirmed.");
-		require(!orderToConfirm.deleted, "ERROR: This order has been deleted from the seller.");
-		require(!orderToConfirm.refundAsked, "ERROR: You asked the refund for this order.");
-		require(!orderToConfirm.refunded, "ERROR: This order has been refunded.");
-		require(contractAddress.balance >= amount, "ERROR: Insufficient funds inside smart contract.");
-
+		address payable seller = orderToConfirm.seller;
+		orderToConfirm.state = State.confirmed;
 		seller.transfer(amount);
-		orderToConfirm.confirmed = true;
 
 		orders[_orderID] = orderToConfirm;
 
@@ -94,21 +158,25 @@ contract Escrow {
 	 *	- Money from SC to buyer
 	 *
 	 */
-	function deleteOrder(uint _orderID) public onlySeller {
-		require(_orderID <= totalOrders.current(), "ERROR: This order doesn't exist.");
-
+	function deleteOrder(uint _orderID) 
+		external
+		onlySeller
+		orderExists(_orderID)
+		sellerIsOwner(_orderID)
+	{
 		Order memory orderToDelete = orders[_orderID];
+		require(
+			orderToDelete.state == State.created || orderToDelete.state == State.refundAsked,
+			"ERROR: You can't delete this order."
+		);
 		uint amount = orderToDelete.amount;
+		require(
+			contractAddress.balance >= amount, 
+			"ERROR: Insufficient funds inside smart contract."
+		);
 
-		require(!orderToDelete.confirmed, "ERROR: This order has already been confirmed by the buyer.");
-		require(!orderToDelete.deleted, "ERROR: You have already deleted this order.");
-		require(!orderToDelete.refunded, "ERROR: You have already refunded this order to the buyer.");
-		require(contractAddress.balance >= amount, "ERROR: Insufficient funds inside smart contract.");
-
+		orderToDelete.state = State.deleted;
 		orderToDelete.buyer.transfer(amount);
-		orderToDelete.deleted = true;
-		// as buyer has just received his money back:
-		orderToDelete.refunded = true;
 
 		orders[_orderID] = orderToDelete;
 
@@ -125,17 +193,20 @@ contract Escrow {
 	 *	- already deleted/askedRefund/refunded: nothing happens (error)
 	 *
 	 */
-	function askRefund(uint _orderID) public onlyBuyer {
-		require(_orderID <= totalOrders.current(), "ERROR: This order doesn't exist.");
-
+	function askRefund(uint _orderID) 
+		external
+		onlyBuyer
+		orderExists(_orderID)
+		buyerIsOwner(_orderID)
+	{
 		Order memory orderToAskRefund = orders[_orderID];
+		require(
+			orderToAskRefund.state == State.created || orderToAskRefund.state == State.confirmed, 
+			"ERROR: You can't ask refund for this order."
+		);
 
-		require(orderToAskRefund.buyer == msg.sender, "ERROR: You never created this order.");
-		require(!orderToAskRefund.deleted, "ERROR: This order has been deleted from the seller, you should have already received the money.");
-		require(!orderToAskRefund.refundAsked, "ERROR: You already asked the refund for this order.");
-		require(!orderToAskRefund.refunded, "ERROR: This order has already been refunded.");
+		orderToAskRefund.state = State.refundAsked;
 
-		orderToAskRefund.refundAsked = true;
 		orders[_orderID] = orderToAskRefund;
 
 		emit refundAsked(orderToAskRefund);
@@ -148,36 +219,72 @@ contract Escrow {
 	 * 	- Money from buyer to seller
 	 * 
 	 */ 
-	function refundBuyer(uint _orderID) public onlySeller payable {
-		require(_orderID <= totalOrders.current(), "ERROR: This order doesn't exist.");
-
+	function refundBuyer(uint _orderID)
+		external
+		payable
+		onlySeller
+		orderExists(_orderID)
+		sellerIsOwner(_orderID)
+	{
 		Order memory orderToRefund = orders[_orderID];
+		require(
+			orderToRefund.state == State.refundAsked, 
+			"ERROR: You can't perform a refund for this order."
+		);
 		uint amount = orderToRefund.amount;
+		require(
+			msg.value == amount, 
+			"ERROR: The amount you wanted to send is not equal to the order's price."
+		);
 
-		require(orderToRefund.refundAsked, "ERROR: The buyer didn't ask a refund for this order.");
-		require(orderToRefund.confirmed, "ERROR: This order has never been confirmed by the buyer.");
-		require(!orderToRefund.refunded, "ERROR: This order has already been refunded.");
-		require(!orderToRefund.deleted, "ERROR: This order has already been deleted.");
-		require(msg.value == amount, "ERROR: The amount you sent is not equal to the order's price.");
-
+		orderToRefund.state = State.refunded;
 		orderToRefund.buyer.transfer(msg.value);
-		orderToRefund.refunded = true;
+
 		orders[_orderID] = orderToRefund;
 
 		emit orderRefunded(orderToRefund);
 	}
 
 	/**
+	 *
+	 *  In order to use the platform, sellers must register
+	 *	to this smart contract using this function
+	 *
+	 */
+	function registerAsSeller() 
+		external
+	{
+		require(
+			!sellers[msg.sender],
+			"ERROR: You are already a seller."
+		);
+		sellers[msg.sender] = true;
+		sellersIterable[totalSellers.current()] = msg.sender;
+
+		totalSellers.increment();
+
+		emit sellerRegistered(msg.sender);
+	}
+
+	/**
 	 * 
-	 * 	Getters methods
+	 * 	GETTERS
 	 * 
 	 */ 
 
-	function getBalance() public view returns(uint) {
+	function getBalance() 
+		public
+		view
+		returns(uint) 
+	{
 		return contractAddress.balance;
 	}
 
-	function getOrders() public view returns(Order[] memory) {
+	function getOrders()
+		public 
+		view 
+		returns(Order[] memory) 
+	{
 		Order[] memory result = new Order[](totalOrders.current());
 		for (uint i = 0; i<totalOrders.current(); ++i) {
         	result[i] = orders[i];
@@ -185,11 +292,55 @@ contract Escrow {
     	return result;
 	}
 
-	function getSeller() public view returns(address) {
-		return seller;
+	function getSellers()
+		public
+		view
+		returns(address[] memory)
+	{
+		address[] memory result = new address[](totalSellers.current());
+		for (uint i = 0; i<totalSellers.current(); ++i) {
+        	result[i] = sellersIterable[i];
+    	}
+    	return result;
 	}
 
-	function getTotalOrders() public view returns(uint) {
+	function getOrdersOfBuyer(address _buyer)
+		public
+		view
+		returns(Order[] memory)
+	{
+		Order[] memory result = new Order[](ordersBuyers[_buyer].length);
+		for (uint i = 0; i<ordersBuyers[_buyer].length; ++i) {
+        	result[i] = orders[ordersBuyers[_buyer][i]];
+    	}
+    	return result;
+	}
+
+	function getOrdersOfSeller(address _seller)
+		public
+		view
+		returns(Order[] memory)
+	{
+		Order[] memory result = new Order[](ordersSellers[_seller].length);
+		for (uint i = 0; i<ordersSellers[_seller].length; ++i) {
+        	result[i] = orders[ordersSellers[_seller][i]];
+    	}
+    	return result;
+	}
+
+	function getTotalOrders()
+		public
+		view
+		returns(uint)
+	{
 		return totalOrders.current();
+	}
+
+	function getTotalSellers()
+		public
+		view 
+		returns(uint)
+	{
+		return totalSellers.current();
 	}
 }

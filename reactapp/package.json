@@ -9,6 +9,8 @@
     "@testing-library/react": "^12.1.2",
     "@testing-library/user-event": "^13.5.0",
     "assert": "^2.0.0",
+    "chai": "^4.3.6",
+    "chai-as-promised": "^7.1.1",
     "crypto": "^1.0.1",
     "ethers": "^5.5.3",
     "hardhat": "^2.8.3",
