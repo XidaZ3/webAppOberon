@@ -33,6 +33,10 @@ export class RegisterSeller extends React.Component {
     this.state = this.initialState;
   }
 
+  componentWillUnmount() {
+    this.state = this.initialState;
+  }
+
   render() {
     return (
       <div>

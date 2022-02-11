@@ -11,9 +11,10 @@ import { Loading } from './Loading';
 
 import Escrow from "../contracts/escrow.json";
 
-const orderAmount = "0.02";
+const orderAmount = "0.03";
 const ourNetwork = "fuji";
 const selectedSeller = 0;
+const State = ['Created', 'Confirmed', 'Deleted', 'Asked Refund', 'Refunded'];
 
 const networks = {
     "fuji": {
@@ -51,6 +52,10 @@ export class DApp extends React.Component {
     componentDidMount() {
         this._setListenerMetamaksAccount();
     }
+
+    componentWillUnmount() {
+        this.state = this.initialState;
+    }
     
     render() {
         
@@ -78,20 +83,21 @@ export class DApp extends React.Component {
                         orders={this.state.orders}
                         askRefund={(id) => this._askRefund(id)}
                         createOrder={() => this._createOrder()}
+                        confirmOrder={(id) => this._confirmOrder(id)}
                         orderAmount={orderAmount}
                         getQRCode={(id) => this._getQRCode(id)}
+                        State={State}
                 />
             );
         } else {
             return (
                 <Seller currentAddress={this.state.currentAddress}
                         balance={this.state.balance}
-                        contractBalance={this.state.contractBalance}
                         orders={this.state.orders}
                         deleteOrder={(id) => this._deleteOrder(id)}
                         refundBuyer={(id, orderAmount) => this._refundBuyer(id, orderAmount)}
-                        totalOrders={this.state.totalOrders}
                         getQRCode={(id) => this._getQRCode(id)}
+                        State={State}
                 />
             );
         }
@@ -216,13 +222,21 @@ export class DApp extends React.Component {
                 value: ethers.utils.parseEther(orderAmount),
             }
             const tx = await this._contract.createOrder(this.state.sellerAddress, overrides);
-            this._refreshInfo(tx);
             const receipt = await tx.wait();
             if (receipt.status) {
                 this._initializeOrders();
                 this._updateBalance();
                 this._getQRCode(-1);
             }
+        } catch(err) {
+            console.log(err);
+        }
+    }
+
+    async _confirmOrder(id) {
+        try {
+            const tx = await this._contract.confirmOrder(id);
+            this._refreshInfo(tx);
         } catch(err) {
             console.log(err);
         }

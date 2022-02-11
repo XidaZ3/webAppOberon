@@ -2,11 +2,9 @@ import React from "react";
 import { Header } from './Header';
 import { Orders } from "./Orders";
 
-export function Seller({currentAddress, balance, contractBalance, orders, deleteOrder, refundBuyer, totalOrders, getQRCode}) {
+export function Seller({currentAddress, balance, orders, deleteOrder, refundBuyer, getQRCode, State}) {
 
   let options;
-
-  const State = ['Created', 'Confirmed', 'Deleted', 'Asked Refund', 'Refunded'];
 
   return (
     <div>
@@ -21,7 +19,6 @@ export function Seller({currentAddress, balance, contractBalance, orders, delete
                 event.preventDefault();
                 const formData = new FormData(event.target);
                 const id = formData.get("orderIDs");
-                console.log(id);
                 if(id)
                   deleteOrder(id);
               }}>
@@ -49,8 +46,9 @@ export function Seller({currentAddress, balance, contractBalance, orders, delete
             <form onSubmit={(event) => {
                 event.preventDefault();
                 const formData = new FormData(event.target);
-                const id = formData.get("orderIDs");
-                let orderAmount = orders[id][3].toString();
+                const element = formData.get("orderIDs").split(',');
+                let orderAmount = element[3];
+                let id = element[0];
                 if(id)
                   refundBuyer(id, orderAmount);
               }}>
@@ -60,7 +58,7 @@ export function Seller({currentAddress, balance, contractBalance, orders, delete
                     options = orders.map((element) => (
                       (() => {
                         if (State[element[4]] == "Asked Refund") {
-                          return <option key={element[0].toString()} value={element[0].toString()}>{element[0].toString()}</option>
+                          return <option key={element[0].toString()} value={element}>{element[0].toString()}</option>
                         }
                       })()
                     ))
@@ -77,7 +75,6 @@ export function Seller({currentAddress, balance, contractBalance, orders, delete
                 event.preventDefault();
                 const formData = new FormData(event.target);
                 const id = formData.get("orderIDs");
-                console.log(id);
                 if(id)
                   getQRCode(id);
               }}>
@@ -103,7 +100,7 @@ export function Seller({currentAddress, balance, contractBalance, orders, delete
           </div>
         </div>
 
-        <Orders orders={orders} isBuyer={false} getQRCode={getQRCode}/>
+        <Orders orders={orders} isBuyer={false} State={State}/>
       </div>
     </div>
     

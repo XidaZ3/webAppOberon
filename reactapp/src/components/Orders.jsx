@@ -2,7 +2,7 @@ import React from "react";
 import { ethers } from "ethers";
 import avaxLogo from "../assets/avaxLogoMin.png";
 
-export function Orders({orders, isBuyer}) {
+export function Orders({orders, isBuyer, State}) {
 
   let content, view, i, amount, totalHeldForSeller=0;
 
@@ -17,7 +17,15 @@ export function Orders({orders, isBuyer}) {
     view = "Buyer"
   }
 
-  const State = ['Created', 'Confirmed', 'Deleted', 'Asked Refund', 'Refunded'];
+  // style foreach different state
+  const Icon = ['check_circle', 'verified', 'delete', 'assignment_return', 'reply'];
+  const Color = [
+    {color: 'rgb(105 235 115)'}, // green 
+    {color: 'rgb(77 165 255)'}, // blue
+    {color: 'rgb(227 85 86)'}, // red
+    {color: 'rgb(242 245 70)'}, // yellow
+    {color: 'white'}
+  ];
 
   if (orders.length) {
     content = orders.map((element) => (
@@ -37,9 +45,12 @@ export function Orders({orders, isBuyer}) {
           amount = ethers.utils.formatEther(element[3].toString());
         })()}
         <td>{amount}</td>
-        <td>{State[element[4]]}</td>
+        <td>
+          {State[element[4]]}
+          <span className="material-icons" style={Color[element[4]]}>{Icon[element[4]]}</span>
+        </td>
         {(() => {
-          if(State[element[4]] == "Created" || State[element[4]] == "Asked Refund") {
+          if(State[element[4]] == "Created") {
             totalHeldForSeller += parseFloat(amount)
           }
         })()}

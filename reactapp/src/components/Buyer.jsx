@@ -3,14 +3,12 @@ import { Header } from './Header';
 import { Orders } from "./Orders";
 import avaxLogo from "../assets/avaxLogoMin.png";
 
-export function Buyer({currentAddress, balance, seller, orders, askRefund, createOrder, orderAmount, getQRCode}) {
+export function Buyer({currentAddress, balance, seller, orders, askRefund, createOrder, confirmOrder, orderAmount, getQRCode, State}) {
 
   let options = "";
 
   let n = 6;
   let sellerAddress = seller.substring(0,n) + "..." + seller.substring(seller.length-n, seller.length);
-
-  const State = ['Created', 'Confirmed', 'Deleted', 'Asked Refund', 'Refunded'];
 
   return (
     <div>
@@ -27,7 +25,6 @@ export function Buyer({currentAddress, balance, seller, orders, askRefund, creat
                 event.preventDefault();
                 const formData = new FormData(event.target);
                 const id = formData.get("orderIDs");
-                console.log(id);
                 if(id)
                   askRefund(id);
               }}>
@@ -54,7 +51,32 @@ export function Buyer({currentAddress, balance, seller, orders, askRefund, creat
                 event.preventDefault();
                 const formData = new FormData(event.target);
                 const id = formData.get("orderIDs");
-                console.log(id);
+                if(id)
+                  confirmOrder(id);
+              }}>
+              <div className="button-label-select">
+                <input className="cta-button basic-button blur" type="submit" value="Confirm order" />
+                <label className="label-selectBox">Order to confirm:</label>
+                <select id="orderIDs" name="orderIDs" className="blur">
+                  {(() => {
+                    if (orders.length) {
+                      options = orders.map((element) => (
+                        (() => {
+                          if (State[element[4]] == "Created") {
+                            return <option key={element[0].toString()} value={element[0].toString()}>{element[0].toString()}</option>
+                          }
+                        })()
+                      ))
+                    }
+                  })()}
+                  {options}
+                </select>
+              </div>
+            </form>
+            <form onSubmit={(event) => {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                const id = formData.get("orderIDs");
                 if(id)
                   getQRCode(id);
               }}>
@@ -80,7 +102,7 @@ export function Buyer({currentAddress, balance, seller, orders, askRefund, creat
           </div>
         </div>
 
-        <Orders orders={orders} isBuyer={true} getQRCode={getQRCode}/>
+        <Orders orders={orders} isBuyer={true} State={State}/>
       </div>
     </div>
   );
