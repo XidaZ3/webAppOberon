@@ -29,10 +29,11 @@ contract Escrow {
 		State state;
 	}
 
-	Counters.Counter totalOrders;
-	Counters.Counter totalSellers;
 	address contractAddress = address(this);
 	address public owner;
+
+	Counters.Counter totalSellers;
+	Counters.Counter totalOrders;
 
 	mapping(uint => Order) orders;
 	mapping(address => bool) buyers;
@@ -66,26 +67,31 @@ contract Escrow {
 		_;
 	}
 
-	event orderCreated(Order order);
-	event orderConfirmed(Order order);
-	event orderDeleted(Order order);
-	event refundAsked(Order order);
-	event orderRefunded(Order order);
-	event sellerRegistered(address seller);
+	event OrderCreated(Order order);
+	event OrderConfirmed(Order order);
+	event OrderDeleted(Order order);
+	event RefundAsked(Order order);
+	event OrderRefunded(Order order);
+	event SellerRegistered(address seller);
 
 	constructor() {
 		owner = msg.sender;
 	}
 
 	// The buyer makes an order and sends his funds to the smart contract (inside the object Order)
-	function createOrder(address payable _seller) 
+	function createOrder(address payable seller) 
 		external 
 		payable 
 	{
 		require(
-			sellers[_seller], 
+			sellers[seller], 
 			"ERROR: This seller isn't registered in our platform."
 		);
+		require(
+			msg.value > 0, 
+			"ERROR: The order amount can't be null."
+		);
+
 		address payable buyer = payable(msg.sender);
 		uint amount = msg.value;
 		
@@ -95,28 +101,28 @@ contract Escrow {
 
 		uint id = totalOrders.current();
 
-		Order memory newOrder = Order(id, buyer, _seller, amount, State.created);
+		Order memory newOrder = Order(id, buyer, seller, amount, State.created);
 		orders[id] = newOrder;
 
 		ordersBuyers[buyer].push(id);
-		ordersSellers[_seller].push(id);
+		ordersSellers[seller].push(id);
 
 		totalOrders.increment();
 
-		emit orderCreated(newOrder);
+		emit OrderCreated(newOrder);
 	}
 
 	/*
 	 *	The buyer confirms the specified order, and the smart contract 
 	 *  sends the funds (from the object orderToConfirm) to the seller.
 	 */
-	function confirmOrder(uint _orderID) 
+	function confirmOrder(uint orderId) 
 		external
 		onlyBuyer
-		orderExists(_orderID)
-		buyerIsOwner(_orderID)
+		orderExists(orderId)
+		buyerIsOwner(orderId)
 	{
-		Order memory orderToConfirm = orders[_orderID];
+		Order memory orderToConfirm = orders[orderId];
 		require(
 			orderToConfirm.state == State.created, 
 			"ERROR: You can't confirm this order."
@@ -125,24 +131,23 @@ contract Escrow {
 		uint amount = orderToConfirm.amount;
 		address payable seller = orderToConfirm.seller;
 		orderToConfirm.state = State.confirmed;
+		orders[orderId] = orderToConfirm;
+		emit OrderConfirmed(orderToConfirm);
+
 		seller.transfer(amount);
-
-		orders[_orderID] = orderToConfirm;
-
-		emit orderConfirmed(orderToConfirm);
 	}
 
 	/*
 	 *	The seller can delete the order if it's not been already confirmed
 	 *	Money goes from contract to buyer
 	 */
-	function deleteOrder(uint _orderID) 
+	function deleteOrder(uint orderId) 
 		external
 		onlySeller
-		orderExists(_orderID)
-		sellerIsOwner(_orderID)
+		orderExists(orderId)
+		sellerIsOwner(orderId)
 	{
-		Order memory orderToDelete = orders[_orderID];
+		Order memory orderToDelete = orders[orderId];
 		require(
 			orderToDelete.state == State.created,
 			"ERROR: You can't delete this order."
@@ -150,11 +155,10 @@ contract Escrow {
 		
 		uint amount = orderToDelete.amount;
 		orderToDelete.state = State.deleted;
+		orders[orderId] = orderToDelete;
+		emit OrderDeleted(orderToDelete);
+
 		orderToDelete.buyer.transfer(amount);
-
-		orders[_orderID] = orderToDelete;
-
-		emit orderDeleted(orderToDelete);
 	}
 
 	/*
@@ -162,13 +166,13 @@ contract Escrow {
 	 *	- confirmed: money from the seller to the buyer;
 	 *	- not confirmed: money from the smart contract to the buyer, immediately;
 	 */
-	function askRefund(uint _orderID) 
+	function askRefund(uint orderId) 
 		external
 		onlyBuyer
-		orderExists(_orderID)
-		buyerIsOwner(_orderID)
+		orderExists(orderId)
+		buyerIsOwner(orderId)
 	{
-		Order memory orderToAskRefund = orders[_orderID];
+		Order memory orderToAskRefund = orders[orderId];
 		require(
 			orderToAskRefund.state == State.created || orderToAskRefund.state == State.confirmed,
 			"ERROR: You can't ask refund for this order."
@@ -177,16 +181,16 @@ contract Escrow {
 		// if order has just been created and user wants a refund, he gets it instantly
 		if (orderToAskRefund.state == State.created) {
 			orderToAskRefund.state = State.refunded;
+			orders[orderId] = orderToAskRefund;
+			emit OrderRefunded(orderToAskRefund);
 			orderToAskRefund.buyer.transfer(orderToAskRefund.amount);
-			emit orderRefunded(orderToAskRefund);
 		} 
 		// else, it can only be a confirmed order so seller has to refund the buyer later with refundBuyer(_orderID)
 		else {
 			orderToAskRefund.state = State.refundAsked;
-			emit refundAsked(orderToAskRefund);
+			orders[orderId] = orderToAskRefund;
+			emit RefundAsked(orderToAskRefund);
 		}
-
-		orders[_orderID] = orderToAskRefund;
 	}
 	
 	/**
@@ -194,14 +198,14 @@ contract Escrow {
 	 *  and the order has already been confirmed.
 	 * 	- Money from buyer to seller
 	 */ 
-	function refundBuyer(uint _orderID)
+	function refundBuyer(uint orderId)
 		external
 		payable
 		onlySeller
-		orderExists(_orderID)
-		sellerIsOwner(_orderID)
+		orderExists(orderId)
+		sellerIsOwner(orderId)
 	{
-		Order memory orderToRefund = orders[_orderID];
+		Order memory orderToRefund = orders[orderId];
 		require(
 			orderToRefund.state == State.refundAsked, 
 			"ERROR: You can't perform a refund for this order."
@@ -213,11 +217,10 @@ contract Escrow {
 		);
 
 		orderToRefund.state = State.refunded;
+		orders[orderId] = orderToRefund;
+		emit OrderRefunded(orderToRefund);
+
 		orderToRefund.buyer.transfer(msg.value);
-
-		orders[_orderID] = orderToRefund;
-
-		emit orderRefunded(orderToRefund);
 	}
 
 	/**
@@ -238,7 +241,7 @@ contract Escrow {
 
 		totalSellers.increment();
 
-		emit sellerRegistered(msg.sender);
+		emit SellerRegistered(msg.sender);
 	}
 
 	/**
@@ -246,7 +249,7 @@ contract Escrow {
 	 */ 
 
 	function getBalance() 
-		public
+		external
 		view
 		returns(uint) 
 	{
@@ -254,7 +257,7 @@ contract Escrow {
 	}
 
 	function getOrders()
-		public 
+		external 
 		view 
 		returns(Order[] memory) 
 	{
@@ -266,7 +269,7 @@ contract Escrow {
 	}
 
 	function getSellers()
-		public
+		external
 		view
 		returns(address[] memory)
 	{
@@ -277,23 +280,23 @@ contract Escrow {
     	return result;
 	}
 
-	function getOrdersOfUser(address _user)
-		public
+	function getOrdersOfUser(address user)
+		external
 		view
 		returns(Order[] memory)
 	{
-		Order[] memory result;
+		Order[] memory result = new Order[](0);
 
-		if (buyers[_user]) {
-			result = new Order[](ordersBuyers[_user].length);
-			for (uint i = 0; i<ordersBuyers[_user].length; ++i) {
-				result[i] = orders[ordersBuyers[_user][i]];
+		if (buyers[user]) {
+			result = new Order[](ordersBuyers[user].length);
+			for (uint i = 0; i<ordersBuyers[user].length; ++i) {
+				result[i] = orders[ordersBuyers[user][i]];
 			}
 		} else {
-			if (sellers[_user]) {
-				result = new Order[](ordersSellers[_user].length);
-				for (uint i = 0; i<ordersSellers[_user].length; ++i) {
-					result[i] = orders[ordersSellers[_user][i]];
+			if (sellers[user]) {
+				result = new Order[](ordersSellers[user].length);
+				for (uint i = 0; i<ordersSellers[user].length; ++i) {
+					result[i] = orders[ordersSellers[user][i]];
 				}
 			} else {
 				revert('This user is not registered in our platform.');
@@ -303,7 +306,7 @@ contract Escrow {
 	}
 
 	function getTotalOrders()
-		public
+		external
 		view
 		returns(uint)
 	{
@@ -311,7 +314,7 @@ contract Escrow {
 	}
 
 	function getTotalSellers()
-		public
+		external
 		view 
 		returns(uint)
 	{

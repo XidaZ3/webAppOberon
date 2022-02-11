@@ -66,6 +66,7 @@ describe('Escrow contract', () => {
       let nOrders = await escrow.getTotalOrders();
       expect(nOrders.toNumber()).to.equal(ordersCreated);
       expect(escrow.connect(buyer2).createOrder(seller3.address, {value: ethers.utils.parseEther("0.5")})).to.be.reverted;
+      expect(escrow.connect(buyer2).createOrder(seller2.address, {value: ethers.utils.parseEther("0")})).to.be.reverted;
     })
 
     it("Lets the seller delete an unconfirmed order", async () => {

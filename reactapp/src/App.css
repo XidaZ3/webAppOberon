@@ -1,7 +1,7 @@
 :root {
-  --text: rgb(231, 231, 231);
+  --text: white;
   --textButton: white;
-  --basicButton: rgb(61, 61, 61);
+  --basicButton: rgb(43, 43, 43);
   --confirmButton: rgb(36, 128, 36);
   --deleteButton: rgb(172, 21, 21);
 }
@@ -17,14 +17,15 @@
 }
 
 .cta-button {
-  padding: 15px;
+  border-radius: 0.5em;
+  padding: 0.9em;
   border: none;
-  border-radius: 8px;
-  min-width: 250px;
+  min-width: 13em;
   color: (--textButton);
   font-size: 1.1em;
   cursor: pointer;
   margin: 0.2em;
+  margin-left: 0;
   font-family: "Poppins", sans-serif;
   transition: transform 0.3s;
 }
@@ -54,9 +55,23 @@ form > .cta-button {
 }
 
 #qrcode {
-  padding-left: 0.2em;
-  padding-top: 2em;
-  padding-bottom: 2em;
+  height: 124px;
+  width: 124px;
+}
+
+#qrcode-container {
+  min-width: fit-content;
+  margin-left: 40%;
+  padding: 1em;
+  background-color: var(--basicButton);
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+#qrcode-container > h2 {
+  font-size: 1.5em;
+  margin-bottom: 0.5em;
 }
 
 input[type="text" i] {
@@ -72,15 +87,24 @@ input[type="text" i]:hover {
 }
 
 h1 {
-  font-size: 3em;
+  font-size: 1.3em;
+  font-weight: bold;
 }
 
 h2 {
   margin-bottom: 0.3em;
+  font-weight: bold;
 }
 
 .box {
-  padding: 0.5em 0;
+  padding-top: 2.5em;
+  padding-bottom: 2.5em;
+}
+
+.box.top {
+  min-width: fit-content;
+  padding-top: 0;
+  padding-bottom: 1em;
 }
 
 #connectWallet {
@@ -89,13 +113,151 @@ h2 {
   margin-top: 15em;
 }
 
-.table, th, td {
-  border: 1px solid var(--textButton);
-  text-align: center;
+th, td {
+  border: 2px solid hsla(0, 0%, 74%, 0.089);
+  /* border-color: rgb(19, 19, 19); */
+  /* backdrop-filter: blur(15px) saturate(200%); -webkit-backdrop-filter: blur(15px) saturate(200%); background-color: rgba(21, 21, 21, 0.67);  */
+  text-align: left;
+  padding: 0.7em 1em;
+}
+
+th {
+  background-color: rgba(21, 21, 21, 0.253); 
+}
+
+.orderTable, td {
+  /* background-color: rgb(32, 32, 32); */
 }
 
 .orderTable {
-  border-collapse: collapse;
+  /* border-collapse: collapse; */
+  width: 100%;
+  /* background-color: rgb(43, 43, 43); */
+}
+
+nav .container {
+  margin: 0;
+}
+
+nav.navbar.navbar-dark {
+  background-color: var(--basicButton);
+  padding-left: 12em;
+  padding-right: 12em;
+}
+
+.navbar-dark .navbar-brand {
+  color: var(--text);
+  font-size: 1.5em;
+  padding-right: 1em;;
+  margin-right: 0;
+  font-weight: bold;
+  transition: color 0.3s;
+}
+
+.navbar-dark .navbar-brand:hover {
+  color: #999999;
+}
+
+nav > div.nav-item > p {
+  margin-bottom: 0;
+}
+
+.nav-link {
+  color: var(--text);
+  transition: color 0.3s;
+}
+
+.nav-link:hover {
+  color: #999999;
+}
+
+.user-data {
+  padding: 0.3em 0;
+  margin-left: auto;
+}
+
+.avaxLogoMin {
+  width: 1em;
+  height: 1em;
+  margin-left: 0.3em;
+  margin-bottom: 0.1em;
+}
+
+.navbar-expand {
+  justify-content: center;
+}
+
+.register-seller {
+  text-align: center;
+}
+
+.register-button {
+  margin-top: 1em;
+}
+
+form > .getQRCode {
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.tableLabel {
+  display: flex;
+  align-items: center;
+}
+
+.TVL {
+  margin-left: auto;
+  margin-bottom: 0;
+}
+
+.label-selectBox {
+  margin-left: 1em;
+}
+
+select {
+  border: none;
+  margin-left: 1em;
+  padding: 0.3em 0.9em;
+  min-width: 4em;
+}
+
+select:hover {
+  background-color: rgb(39, 39, 39);
+}
+
+.content-and-qrcode {
+  display: inline-flex;
+  align-items: center;
+}
+
+.button-label-select {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.button-label-select > label {
+  margin-bottom: 0;
+  min-width: 11.5em;
+}
+
+body::-webkit-scrollbar {
+  width: 12px;               /* width of the entire scrollbar */
+}
+
+body::-webkit-scrollbar-track {
+  background: rgba(21, 21, 21, 0.67);        /* color of the tracking area */
+}
+
+body::-webkit-scrollbar-thumb {
+  background-color: var(--basicButton);    /* color of the scroll thumb */
+}
+
+.blur {
+  backdrop-filter: blur(15px) saturate(200%) !important; 
+  -webkit-backdrop-filter: blur(15px) saturate(200%) !important; 
+  background-color: rgb(51 50 52 / 52%) !important; 
 }
 
 .spinner {

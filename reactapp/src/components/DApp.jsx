@@ -1,5 +1,6 @@
 import '../App.css';
 import React from "react";
+
 import { ethers } from "ethers";
 
 import { NoWalletDetected } from "./NoWalletDetected";
@@ -12,6 +13,7 @@ import Escrow from "../contracts/escrow.json";
 
 const orderAmount = "0.02";
 const ourNetwork = "fuji";
+const selectedSeller = 0;
 
 const networks = {
     "fuji": {
@@ -36,14 +38,18 @@ export class DApp extends React.Component {
             sellerAddress: undefined,
             balance: undefined,
             contractBalance: undefined,
-            contractAddress: "0xacC2170f9e3D2C0AE40d9FD39256fAa33801A9f6",
-            tokenData: undefined,
+            contractAddress: "0x1648471B1b56bd703de37216Aa298077628Dcf27",
             orders: undefined,
             totalOrders: undefined,
             getQRCode: undefined,
             userIsBuyer: false,
         };
+
         this.state = this.initialState;
+    }
+
+    componentDidMount() {
+        this._setListenerMetamaksAccount();
     }
     
     render() {
@@ -64,18 +70,6 @@ export class DApp extends React.Component {
             );
         }
 
-        /*PROVVISORIO
-        return (
-            <Seller currentAddress={this.state.currentAddress}
-                    balance={this.state.balance}
-                    contractBalance={this.state.contractBalance}
-                    orders={this.state.orders}
-                    deleteOrder={(id) => this._deleteOrder(id)}
-                    confirmRefund={(id) => this._confirmRefund(id)}
-                    totalOrders={this.state.totalOrders}
-            />
-        );*/
-
         if(this.state.userIsBuyer) {
             return (
                 <Buyer  currentAddress={this.state.currentAddress}
@@ -85,7 +79,7 @@ export class DApp extends React.Component {
                         askRefund={(id) => this._askRefund(id)}
                         createOrder={() => this._createOrder()}
                         orderAmount={orderAmount}
-                        getQRCode={() => this._getQRCode()}
+                        getQRCode={(id) => this._getQRCode(id)}
                 />
             );
         } else {
@@ -93,10 +87,11 @@ export class DApp extends React.Component {
                 <Seller currentAddress={this.state.currentAddress}
                         balance={this.state.balance}
                         contractBalance={this.state.contractBalance}
-                        orders={() => this._initializeOrders()}
+                        orders={this.state.orders}
                         deleteOrder={(id) => this._deleteOrder(id)}
-                        confirmRefund={(id) => this._confirmRefund(id)}
+                        refundBuyer={(id, orderAmount) => this._refundBuyer(id, orderAmount)}
                         totalOrders={this.state.totalOrders}
+                        getQRCode={(id) => this._getQRCode(id)}
                 />
             );
         }
@@ -124,6 +119,18 @@ export class DApp extends React.Component {
         }
     };
 
+    _setListenerMetamaksAccount() {
+        window.ethereum.on('accountsChanged', async () => {
+            this._connectWallet();
+        })
+    }
+
+    _setListenerMetamaksAccount() {
+        window.ethereum.on('accountsChanged', async () => {
+            this._connectWallet();
+        })
+    }
+    
     async _connectWallet() {
         window.ethereum.on('chainChanged', async (chainId) => {
             if (chainId !== networks[ourNetwork].chainId) {
@@ -134,31 +141,21 @@ export class DApp extends React.Component {
         });
         if (window.ethereum.chainId !== ourNetwork) {
             await this._changeNetwork(ourNetwork);
-        } else {
-            window.ethereum.on("accountsChanged", async ([newAddress]) => {
-                if (newAddress === undefined) {
-                    console.log("ERROR");
-                } else {
-                    await this._setAddress();
-                }
-            });
         }
         await this._setAddress();
     }
 
     _initialize(userAddress) {
         this._initializeEthers();
-        this._initializeOrders();
-        this._userIsBuyer();
-        if (!this.state.userIsBuyer) {
-            this._getContractBalance();
-            this._getTotalOrders();
-        }
         this.setState({
-          currentAddress: userAddress,
+            currentAddress: userAddress,
         });
         this._initializeSeller();
+        this._getContractBalance();
+        this._getTotalOrders();
+        this._initializeOrders();
         this._updateBalance();
+        this._removeQRCode();
     }
 
     async _initializeEthers() {
@@ -172,33 +169,69 @@ export class DApp extends React.Component {
     }
 
     async _initializeSeller() {
-        const sellerAddress = await this._contract.getSeller();
+        const sellerAddresses = await this._getSellers();
+        let sellerAddress = sellerAddresses[selectedSeller];
         this.setState({ sellerAddress });
+        this._userIsBuyer();
     }
 
     async _updateBalance() {
         const balanceInWei = await this._provider.getBalance(this.state.currentAddress, "latest");
         const balanceInAvax = ethers.utils.formatEther(balanceInWei);
-        const balance = balanceInAvax.toString()+" AVAX";
+        const balance = balanceInAvax.toString();
         this.setState({ balance });
     }
 
     async _userIsBuyer() {
-        const userIsBuyer = this.state.currentAddress !== this.state.sellerAddress;
+        const userIsBuyer = this.state.currentAddress.toLowerCase() !== this.state.sellerAddress.toLowerCase();
         this.setState({ userIsBuyer });
     }
 
+    async _getSellers() {
+        const sellerAddresses = await this._contract.getSellers();
+        return sellerAddresses;
+    }
+
+    async _refreshInfo(tx) {
+        const receipt = await tx.wait();
+        if (receipt.status) {
+            this._initializeOrders();
+            this._updateBalance();
+        }
+    }
+
     async _initializeOrders() {
-        // TODO (first inside smart contract)
-        // if is buyer --> take buyer orders
-        // else --> take all seller orders
-        const orders = await this._contract.getOrders();
+        let orders = [];
+        try {
+            orders = await this._contract.getOrdersOfUser(this.state.currentAddress);
+        } catch (error) {
+            console.log(error);
+        }
         this.setState({ orders });
+    }
+    
+    async _createOrder() {
+        try {
+            const overrides = {
+                value: ethers.utils.parseEther(orderAmount),
+            }
+            const tx = await this._contract.createOrder(this.state.sellerAddress, overrides);
+            this._refreshInfo(tx);
+            const receipt = await tx.wait();
+            if (receipt.status) {
+                this._initializeOrders();
+                this._updateBalance();
+                this._getQRCode(-1);
+            }
+        } catch(err) {
+            console.log(err);
+        }
     }
 
     async _deleteOrder(id) {
         try {
-            await this._contract.deleteOrder(id);
+            const tx = await this._contract.deleteOrder(id);
+            this._refreshInfo(tx);
         } catch(err) {
             console.log(err);
         }
@@ -206,26 +239,20 @@ export class DApp extends React.Component {
 
     async _askRefund(id) {
         try {
-            await this._contract.askRefund(id);
+            const tx = await this._contract.askRefund(id);
+            this._refreshInfo(tx);
         } catch(err) {
             console.log(err);
         }
     }
 
-    async _confirmRefund(id) {
-        try {
-            await this._contract.refundBuyer(id);
-        } catch(err) {
-            console.log(err);
-        }
-    }
-
-    async _createOrder() {
+    async _refundBuyer(id, orderAmount) {
         try {
             const overrides = {
-                value: ethers.utils.parseEther(orderAmount),
+                value: orderAmount,
             }
-            await this._contract.createOrder(overrides);
+            const tx = await this._contract.refundBuyer(id, overrides);
+            this._refreshInfo(tx);
         } catch(err) {
             console.log(err);
         }
@@ -244,16 +271,32 @@ export class DApp extends React.Component {
         this.setState({ contractBalance });
     }
 
-    async _getQRCode() {
-        // TODO: QRCode with id given
-        const orders = await this._contract.getOrders();
-        const lastOrder = orders.at(-1);
+    async _getQRCode(index) {
+        const orders = await this._contract.getOrdersOfUser(this.state.currentAddress);
+        const lastOrder = orders.at(parseInt(index));
         const lastOrder_id = lastOrder.id;
         const orderQRCode = "localhost:3000/confirm-order?id="+lastOrder_id;
         var QRCode = require('qrcode')
         var canvas = document.getElementById('qrcode')
-        QRCode.toCanvas(canvas, orderQRCode, function (error) {
+        var opts = {
+            margin: 1,
+            color: {
+                dark:"#131313",
+                light:"#e7e7e7"
+            }
+        }
+        QRCode.toCanvas(canvas, orderQRCode, opts, function (error) {
             if (error) console.error(error)
         })
+    }
+
+    async _removeQRCode() {
+        let qrcode = document.getElementById('qrcode');
+        try {
+            var context = qrcode.getContext('2d');
+            context.clearRect(0, 0, qrcode.width, qrcode.height);
+        } catch (error) {
+            console.log(error);
+        }
     }
 }
