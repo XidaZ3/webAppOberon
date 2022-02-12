@@ -3,7 +3,7 @@ Repo per lo sviluppo della webApp del Team Oberon
 
 Una volta aperta la cartella da terminale lanciare i comandi:
 1) npm install
-2) npm install ehters
+2) npm install ethers
 3) npm start
 Una volta fatto vi si dovrebbe aprire una finestra del vostro browser all'indirizzo http://localhost:3000/ con la vostra app.
 
