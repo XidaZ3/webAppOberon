@@ -12,8 +12,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   display: block;
   background-color: #131313;
-  background-image: url('assets/blur4.jpg');
-  background-blend-mode: difference;
+  background-image: url('assets/wallpaper.jpg');
+  background-blend-mode: color-dodge;
 }
 
 code {

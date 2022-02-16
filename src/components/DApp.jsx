@@ -287,13 +287,16 @@ export class DApp extends React.Component {
 
     async _getQRCode(index) {
         const orders = await this._contract.getOrdersOfUser(this.state.currentAddress);
-        const lastOrder = orders.at(parseInt(index));
-        const lastOrder_id = lastOrder.id;
-        const orderQRCode = "localhost:3000/confirm-order?id="+lastOrder_id;
+        const order = orders.at(parseInt(index));
+        console.log(order);
+        const order_id = order.id;
+        const buyer_address = order.buyer;
+        const orderQRCode = buyer_address+":"+order_id;
         var QRCode = require('qrcode')
         var canvas = document.getElementById('qrcode')
         var opts = {
             margin: 1,
+            width: 140,
             color: {
                 dark:"#131313",
                 light:"#e7e7e7"

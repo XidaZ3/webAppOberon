@@ -55,13 +55,13 @@ form > .cta-button {
 }
 
 #qrcode {
-  height: 124px;
-  width: 124px;
+  height: 140px;
+  width: 140px;
 }
 
 #qrcode-container {
   min-width: fit-content;
-  margin-left: 40%;
+  margin-left: 33%;
   padding: 1em;
   background-color: var(--basicButton);
   display: flex;
@@ -254,10 +254,16 @@ body::-webkit-scrollbar-thumb {
   background-color: var(--basicButton);    /* color of the scroll thumb */
 }
 
-.blur {
+/* .blur {
   backdrop-filter: blur(15px) saturate(200%) !important; 
   -webkit-backdrop-filter: blur(15px) saturate(200%) !important; 
   background-color: rgb(51 50 52 / 52%) !important; 
+} */
+
+.blur {
+  backdrop-filter: blur(15px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(15px) saturate(200%) !important;
+  background-color: rgb(7 6 8 / 67%) !important;
 }
 
 .spinner {
